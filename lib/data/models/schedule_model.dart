@@ -13,9 +13,14 @@ class ScheduleModel {
 
   factory ScheduleModel.fromJson(Map<String, dynamic> json) {
     return ScheduleModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      doctorId: json['doctor_id'] is int ? json['doctor_id'] : int.parse(json['doctor_id'].toString()),
-      // Menyesuaikan variasi kolom hari dan jam
+      id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      doctorId:
+          int.tryParse(
+            json['doctor_id']?.toString() ??
+                json['id_dokter']?.toString() ??
+                '0',
+          ) ??
+          0,
       day: json['day'] ?? json['hari'] ?? json['hari_praktik'] ?? 'Hari -',
       time: json['time'] ?? json['jam'] ?? json['jam_praktik'] ?? 'Jam -',
     );

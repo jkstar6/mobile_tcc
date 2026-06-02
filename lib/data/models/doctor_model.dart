@@ -11,9 +11,14 @@ class DoctorModel {
 
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
     return DoctorModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      poliId: json['poli_id'] is int ? json['poli_id'] : int.parse(json['poli_id'].toString()),
-      // Menyesuaikan jika di database bernama 'nama_dokter'
+      // Menggunakan tryParse agar tidak crash jika null, default ke 0
+      id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      
+      // Mengecek berbagai kemungkinan nama kolom dari backend
+      poliId: int.tryParse(json['poli_id']?.toString() ?? 
+                           json['id_poli']?.toString() ?? 
+                           json['poliklinik_id']?.toString() ?? '0') ?? 0,
+                           
       name: json['name'] ?? json['nama'] ?? json['nama_dokter'] ?? 'Nama Dokter Kosong',
     );
   }
