@@ -1,10 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+// Tambahkan import ApiService (sesuaikan path-nya jika berbeda)
+import 'api_service.dart'; 
 
 class AuthRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Inisialisasi ApiService
+  final ApiService _apiService = ApiService(); 
 
   // Fungsi Register
   Future<UserModel?> registerUser({
@@ -38,6 +42,14 @@ class AuthRepository {
           'nik': newUser.nik,
           'created_at': FieldValue.serverTimestamp(),
         });
+
+        // 3. --- LOMPATAN KE LARAVEL (BARU) ---
+        // Setelah sukses di Firebase, langsung simpan otomatis ke MySQL
+        await _apiService.registerPatientToBackend(
+          uid: firebaseUser.uid,
+          name: name,
+          nik: nik,
+        );
 
         return newUser;
       }

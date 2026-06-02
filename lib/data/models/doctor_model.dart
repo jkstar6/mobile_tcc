@@ -13,7 +13,8 @@ class DoctorModel {
     return DoctorModel(
       id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
       poliId: json['poli_id'] is int ? json['poli_id'] : int.parse(json['poli_id'].toString()),
-      name: json['name'] ?? json['nama'] ?? '',
+      // Menyesuaikan jika di database bernama 'nama_dokter'
+      name: json['name'] ?? json['nama'] ?? json['nama_dokter'] ?? 'Nama Dokter Kosong',
     );
   }
 }

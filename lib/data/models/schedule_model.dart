@@ -15,8 +15,9 @@ class ScheduleModel {
     return ScheduleModel(
       id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
       doctorId: json['doctor_id'] is int ? json['doctor_id'] : int.parse(json['doctor_id'].toString()),
-      day: json['day'] ?? json['hari'] ?? '',
-      time: json['time'] ?? json['jam'] ?? '',
+      // Menyesuaikan variasi kolom hari dan jam
+      day: json['day'] ?? json['hari'] ?? json['hari_praktik'] ?? 'Hari -',
+      time: json['time'] ?? json['jam'] ?? json['jam_praktik'] ?? 'Jam -',
     );
   }
 }

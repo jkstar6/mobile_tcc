@@ -7,7 +7,8 @@ import '../models/schedule_model.dart';
 
 class ApiService {
   // Ubah sesuai dengan host server backend Laravel kalian
-  static const String baseUrl = 'http://192.168.1.2:8000/api';
+  static const String baseUrl =
+      'https://backend-antrean-433898248394.asia-southeast2.run.app/api';
 
   Future<List<PoliModel>> getPolis() async {
     try {
@@ -33,65 +34,50 @@ class ApiService {
   }
 
   // Mengambil daftar Dokter berdasarkan Poli
+  // --- UBAH BAGIAN INI SAJA DI API SERVICE ---
+
   Future<List<DoctorModel>> getDoctorsByPoli(int poliId) async {
     try {
-      // Biasanya API akan menerima parameter seperti /doctors?poli_id=1
-      final response = await http.get(
-        Uri.parse('$baseUrl/doctors?poli_id=$poliId'),
-      );
+      // Backend mengambil semua dokter, tidak difilter dari server
+      final response = await http.get(Uri.parse('$baseUrl/doctors'));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => DoctorModel.fromJson(json)).toList();
+        final allDoctors = data
+            .map((json) => DoctorModel.fromJson(json))
+            .toList();
+        // Memfilter secara lokal di aplikasi mobile
+        return allDoctors.where((doc) => doc.poliId == poliId).toList();
       } else {
         throw Exception('Gagal memuat data Dokter');
       }
     } catch (e) {
-      print("Koneksi API Gagal, menggunakan data dummy dokter: $e");
-      // Data Dummy Dokter
-      List<DoctorModel> dummyDoctors = [
-        DoctorModel(id: 1, poliId: 1, name: 'dr. Andi (Umum)'),
-        DoctorModel(id: 2, poliId: 1, name: 'dr. Budi (Umum)'),
-        DoctorModel(id: 3, poliId: 2, name: 'drg. Citra (Gigi)'),
-        DoctorModel(id: 4, poliId: 3, name: 'dr. Dewi, Sp.A (Anak)'),
-        DoctorModel(id: 5, poliId: 4, name: 'dr. Eko, Sp.M (Mata)'),
-      ];
-      // Filter dummy data sesuai poli yang dipilih
-      return dummyDoctors.where((doc) => doc.poliId == poliId).toList();
+      throw Exception('Error Dokter: $e');
     }
   }
 
-  // Mengambil jadwal berdasarkan Dokter
   Future<List<ScheduleModel>> getSchedulesByDoctor(int doctorId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/schedules?doctor_id=$doctorId'),
-      );
+      // Backend mengambil semua jadwal
+      final response = await http.get(Uri.parse('$baseUrl/schedules'));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => ScheduleModel.fromJson(json)).toList();
+        final allSchedules = data
+            .map((json) => ScheduleModel.fromJson(json))
+            .toList();
+        // Memfilter jadwal khusus untuk dokter yang dipilih
+        return allSchedules
+            .where((sched) => sched.doctorId == doctorId)
+            .toList();
       } else {
         throw Exception('Gagal memuat data Jadwal');
       }
     } catch (e) {
-      print("Koneksi API Gagal, menggunakan data dummy jadwal: $e");
-      // Data Dummy Jadwal
-      List<ScheduleModel> dummySchedules = [
-        ScheduleModel(id: 1, doctorId: 1, day: 'Senin', time: '08:00 - 12:00'),
-        ScheduleModel(id: 2, doctorId: 1, day: 'Selasa', time: '08:00 - 12:00'),
-        ScheduleModel(id: 3, doctorId: 2, day: 'Rabu', time: '13:00 - 16:00'),
-        ScheduleModel(id: 4, doctorId: 3, day: 'Kamis', time: '09:00 - 14:00'),
-        ScheduleModel(id: 5, doctorId: 4, day: 'Jumat', time: '08:00 - 11:00'),
-        ScheduleModel(id: 6, doctorId: 5, day: 'Senin', time: '10:00 - 15:00'),
-      ];
-      return dummySchedules
-          .where((sched) => sched.doctorId == doctorId)
-          .toList();
+      throw Exception('Error Jadwal: $e');
     }
   }
 
-  // Mengirim data booking ke backend Laravel
   Future<Map<String, dynamic>> storeBooking({
     required String userId,
     required int scheduleId,
@@ -99,6 +85,9 @@ class ApiService {
     required String nik,
   }) async {
     try {
+      // Mendapatkan tanggal hari ini (Format YYYY-MM-DD)
+      String today = DateTime.now().toIso8601String().split('T')[0];
+
       final response = await http.post(
         Uri.parse('$baseUrl/booking'),
         headers: {
@@ -106,10 +95,9 @@ class ApiService {
           'Accept': 'application/json',
         },
         body: json.encode({
-          'user_id': userId,
+          'patient_id': userId, // Sekarang mengirim teks UID Firebase yang asli
           'schedule_id': scheduleId,
-          'name': name,
-          'nik': nik,
+          'tanggal': today,
         }),
       );
 
@@ -120,14 +108,37 @@ class ApiService {
         throw Exception(errorData['message'] ?? 'Gagal melakukan booking');
       }
     } catch (e) {
-      print("Koneksi API Gagal, menggunakan simulasi booking sukses: $e");
-      // BACKUP PLAN: Jika Laravel belum siap, kembalikan simulasi data nomor antrean
-      await Future.delayed(const Duration(seconds: 1)); // Efek loading
-      return {
-        'status': 'success',
-        'message': 'Booking berhasil disimpan',
-        'data': {'nomor_antrean': 'A-012', 'sisa_antrean': 5},
-      };
+      throw Exception('Koneksi Booking Gagal: $e');
+    }
+  }
+
+  // Fungsi untuk menyimpan profil pasien ke Laravel setelah register Firebase
+  Future<void> registerPatientToBackend({
+    required String uid,
+    required String name,
+    required String nik,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/patients'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({'id': uid, 'nama': name, 'nik': nik}),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        // Cetak pesan asli dari Laravel ke terminal (Debug Console)
+        print('====== ERROR LARAVEL ======');
+        print(response.body);
+        print('===========================');
+        throw Exception(
+          'Gagal menyimpan data pasien. Cek terminal untuk detailnya.',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error Sinkronisasi Pasien: $e');
     }
   }
 }
